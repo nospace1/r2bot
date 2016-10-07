@@ -2,7 +2,6 @@
 #needs to run as python2 as r2pipe is supported such
 import socket
 import time
-import threading
 import r2pipe
 import re
 import os
@@ -189,29 +188,45 @@ class Bot():
         else:
             self.talk(dataDict['where'], "No project exists with that name")
 
+
     #r2bot: command stuff here
+    #r2bot: -all command stuff here
     def issueCommand(self, dataDict):
+        printAll = False
         #check to see if they are in a project
-        #if(dataDict['who'] in self.projects):
-        command = dataDict['data'].split(' ', 1)[1]
+        maxLimit = 75 #because holy shit someone could abuse printing out everything a maxer limit eh?
+        if('-all' in dataDict['data']):
+            printAll = True
+            command = dataDict['data'].split(' ', 2)[2]
+        else:
+            command = dataDict['data'].split(' ', 1)[1]
         print("command is: " + command)
         if(len(command) > 1):
             if('!' in command):
                 self.talk(dataDict['where'], "! is not an allowed character")
             else:
-
                 for projname, proj in self.projects.iteritems():
                     if(dataDict['who'] in proj.users):
                         lines = proj.command(command)
                         if(len(lines) > 0):
-                            if(len(lines) > self.lineLimit):
-                                for x in xrange(0,self.lineLimit):
-                                    self.talk(dataDict['where'], lines[x])
+                            if(printAll):
+                                count = 0
+                                for line in lines:
+                                    self.talk(dataDict['where'], line)
+                                    time.sleep(1) #throttle itself but prints all
+                                    count += 1
+                                    if(count >= maxLimit):
+                                        return
                                 return
                             else:
-                                for x in xrange(0, len(lines)):
-                                    self.talk(dataDict['where'], lines[x])
-                                return
+                                if(len(lines) >= self.lineLimit):
+                                    for x in xrange(0,self.lineLimit):
+                                        self.talk(dataDict['where'], lines[x])
+                                    return
+                                else:
+                                    for x in xrange(0, len(lines)):
+                                        self.talk(dataDict['where'], lines[x])
+                                    return
 
                 self.talk(dataDict['where'], dataDict['who'] + ": You are not in any projects")
         else:
@@ -222,14 +237,12 @@ class Bot():
         limitStr = dataDict['data'].split(' ')[2]
         if(limitStr.isdigit()):
             limit = int(limitStr)
-            if(limit > 0 and limit < 30):
+            if(limit > 0 and limit <= 30):
                 self.lineLimit = limit
             else:
                 self.talk(dataDict['where'], "Can only print 30 lines at most")
         else:
             self.talk(dataDict['where'], "Not a digit")
-
-
 
     def getCommand(self, data):
         return data.split(' ')[1]
@@ -266,8 +279,13 @@ class Bot():
     #r2bot join channel
     def join(self, dataDict):
         chan = dataDict['data'].split(' ')[2]
-        print("Channel: " + chan)
+        print("Channel: " + chan + " joined")
         self.joinChan(chan)
+
+    def leave(self, dataDict):
+        chan = dataDict['data'].split(' ')[2]
+        print("Channel: " + chan + " left")
+        self.part(chan)
 
     def interpret(self, who, where, data, mtype):
         print("\033[93m[{bn}>] Interpreting {s} of {mt} from {u} in channel {wh}\033[0m"\
@@ -290,6 +308,8 @@ class Bot():
                 self.setLimit(dataDict)
             elif(command.lower() == 'join'):
                 self.join(dataDict)
+            elif(command.lower() == 'leave'):
+                self.leave(dataDict)
             else:
                 self.issueCommand(dataDict)
 
