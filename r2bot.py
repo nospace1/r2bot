@@ -64,13 +64,6 @@ class Connection():
     def lookup(self, user):
         self.sendraw("WHOIS {u}\r\n".format(u=user))
 
-    def annoyHellbacon():
-        '''sends stringy a message'''
-        msg = "hi"
-        msg = "PRIVMSG hellbacon :%s\r\n" % (msg)
-        sendraw(msg)
-        threading.Timer(5, annoyHellbacon).start()
-
     def timedEvent(function, interval):
         #call this function at a duration in the future
         threading.Timer(interval, function).start()
@@ -137,7 +130,8 @@ class Bot():
                 'projectinfo': self.projectInfo,
                 'closeproject': self.closeProject,
                 'help': self.help,
-                'man': self.man }
+                'man': self.man,
+                'github': self.github }
 
     def link(self):
         self.conn = Connection(nick=self.name)
@@ -175,6 +169,12 @@ class Bot():
         else:
             f.close()
             return False
+
+    def github(self, dataDict):
+        """
+        Usage: r2bot: github - returns a link to github page
+        """
+        self.talk(dataDict['where'], dataDict['who'] + ": https://github.com/nospace1/r2bot")
 
     def man(self, dataDict):
         """
@@ -347,11 +347,10 @@ class Bot():
         pname = dataDict['data'].split(' ')[2]
         for projname, proj in self.projects.iteritems():
             if(projname == pname):
-#self.projects.remove(projname)
                 proj.close()
-                self.project[projname] = None #maybe clears all data associated with?
                 del self.projects[projname]
                 self.talk(dataDict['where'], "Project " + proj.name + " closed")
+                proj = None #destroys data associated with it?
                 return
         self.talk(dataDict['where'], dataDict['who'] + ": Project not found")
 
@@ -379,26 +378,9 @@ class Bot():
             command = self.getCommand(data)
             dataDict = self.constructDict(who, where, data, self)
             print("Command: " + command + " extracted")
-            if(command.lower() == 'joinproject'):
-                self.joinProject(dataDict)
-            elif(command.lower() == 'addproject'):
-                self.addProject(dataDict)
-            elif(command.lower() == 'listprojects'):
-                self.listProjects(dataDict)
-            elif(command.lower() == 'projectinfo'):
-                self.projectInfo(dataDict)
-            elif(command.lower() == 'closeproject'):
-                self.closeProject(dataDict)
-            elif(command.lower() == 'setlimit'):
-                self.setLimit(dataDict)
-            elif(command.lower() == 'join'):
-                self.join(dataDict)
-            elif(command.lower() == 'leave'):
-                self.leave(dataDict)
-            elif(command.lower() == 'help'):
-                self.help(dataDict)
-            elif(command.lower() == 'man'):
-                self.man(dataDict)
+
+            if(command.lower() in self.abilityDict):
+                self.abilityDict[command](dataDict)
             else:
                 self.issueCommand(dataDict)
 
