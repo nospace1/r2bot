@@ -5,6 +5,7 @@ import time
 import r2pipe
 import re
 import os
+import getpass
 
 class Connection():
     def __init__(self, **kwargs):
@@ -30,6 +31,11 @@ class Connection():
         print("\033[91m[>] {s}\033[0m".format(s=string))
         self.sock.send(string.encode())
 
+    def oper(self, password):
+        print("sending password...")
+        self.sendraw("OPER r2bot {p}\r\n" \
+                .format(p=password))
+
     def register(self):
         #registers after connection?
         print("Sending Nick information")
@@ -48,6 +54,10 @@ class Connection():
     def recieve(self):
         data = self.sock.recv(4096).decode()
         return data
+
+    def cprivmsg(self, chan, message):
+        msg = "CPRIVMSG r2bot {ch} :{m}\r\n".format(ch=chan, m=message)
+        self.sendraw(msg)
 
     def privmsg(self, chan, message):
         msg = "PRIVMSG {ch} :{m}\r\n".format(ch=chan, m=message)
@@ -95,7 +105,7 @@ class Project():
 class MessageHandler():
     #regex it to get nick, username, server, message type,
     #   channel, and message
-    #ex: bob!boberson@yakko.cs.wmich.edu PRIVMSG #asdf :testing
+    #ex: bob!boberson@servername PRIVMSG #asdf :testing
     def parse(self, data):
         #"borrowed" from stringy <3
         #   who probably "borrowed" it from someone else
@@ -116,7 +126,7 @@ class MessageHandler():
 class Bot():
     def __init__(self):
         self.name = "r2bot"
-        self.channels = ['#thepit'] #, '#ctf', '#5950', '#nospace']
+        self.channels = ['#thepit','#thedeeperpit',  '#5950', '#nospace']
         self.connection = None
         self.projects = {} #a buncha r2pipes with associated name
         self.lineLimit = 10
@@ -125,8 +135,8 @@ class Bot():
                 'joinproject': self.joinProject,
                 'setlimit': self.setLimit,
                 'addproject': self.addProject,
-                'join': self.join,
-                'leave': self.leave,
+                #'join': self.join, #otherwise I have to sanatize
+                #'leave': self.leave,
                 'listprojects': self.listProjects,
                 'projectinfo': self.projectInfo,
                 'closeproject': self.closeProject,
@@ -140,6 +150,7 @@ class Bot():
         self.conn = Connection(nick=self.name)
         self.conn.connect()
         self.conn.register()
+        self.conn.oper(getpass.getpass())
 
     def run(self):
         self.link()
@@ -166,6 +177,22 @@ class Bot():
     def constructDict(self, who, where, data, bot):
         dataDict = {'who':who.split('!')[0], 'where':where, 'data':data, 'conn':self.conn, 'bot':bot}
         return dataDict
+
+    def isSafe(self, dataDict):
+        safe = True
+        if("rm" in dataDict['data']):
+            safe = False
+            return
+        if("mkdir" in dataDict['data']):
+            safe = False
+            return
+        if("cat" in dataDict['data']):
+            safe = False
+            return
+        if("ls" in dataDict['data']):
+            safe = False
+            return
+        return safe
 
     def isELFBinary(self, filepath):
         f = open(filepath, 'rb')
@@ -391,10 +418,17 @@ class Bot():
             dataDict = self.constructDict(who, where, data, self)
             print("Command: " + command + " extracted")
 
-            if(command.lower() in self.abilityDict):
-                self.abilityDict[command](dataDict)
+            if('#' not in dataDict['where']):
+                print("No # found")
+                self.talk(dataDict['who'], "I do not accept private messages")
             else:
-                self.issueCommand(dataDict)
+                if(self.isSafe(dataDict)):
+                    if(command.lower() in self.abilityDict):
+                        self.abilityDict[command](dataDict)
+                    else:
+                        self.issueCommand(dataDict)
+                else:
+                    print("Evil attempts were made")
 
     def listen(self):
         while True:
