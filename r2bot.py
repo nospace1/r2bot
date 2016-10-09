@@ -116,12 +116,13 @@ class MessageHandler():
 class Bot():
     def __init__(self):
         self.name = "r2bot"
-        self.channels = ['#thedeeperpit']#, '#ctf', '#5950', '#nospace']
+        self.channels = ['#thepit'] #, '#ctf', '#5950', '#nospace']
         self.connection = None
         self.projects = {} #a buncha r2pipes with associated name
         self.lineLimit = 10
 
-        self.abilityDict = { 'joinproject': self.joinProject,
+        self.abilityDict = {
+                'joinproject': self.joinProject,
                 'setlimit': self.setLimit,
                 'addproject': self.addProject,
                 'join': self.join,
@@ -131,7 +132,9 @@ class Bot():
                 'closeproject': self.closeProject,
                 'help': self.help,
                 'man': self.man,
-                'github': self.github }
+                'github': self.github,
+                'purpose': self.purpose
+                }
 
     def link(self):
         self.conn = Connection(nick=self.name)
@@ -146,6 +149,9 @@ class Bot():
 
     def joinChan(self, chan):
         self.conn.join(chan)
+
+    def part(self, chan):
+        self.conn.part(chan)
 
     def talk(self, chan, msg):
         self.conn.privmsg(chan, msg)
@@ -169,6 +175,12 @@ class Bot():
         else:
             f.close()
             return False
+
+    def purpose(self, dataDict):
+        """
+        Usage: r2bot: purpose - tells the purpose of the bot for the unitiated
+        """
+        self.talk(dataDict['where'], dataDict['who'] + ": My purpose is to help teach reverse engineering with usage of radare2/r2 via collaboration and demonstration. If you wish to use this bot for yourself only I recommend downloading and installing radare2 here: http://rada.re/r/down.html and using that instead. r2 is usable on yakko.")
 
     def github(self, dataDict):
         """
