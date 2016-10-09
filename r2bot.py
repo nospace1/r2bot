@@ -182,16 +182,12 @@ class Bot():
         safe = True
         if("rm" in dataDict['data']):
             safe = False
-            return
         if("mkdir" in dataDict['data']):
             safe = False
-            return
         if("cat" in dataDict['data']):
             safe = False
-            return
         if("ls" in dataDict['data']):
             safe = False
-            return
         return safe
 
     def isELFBinary(self, filepath):
